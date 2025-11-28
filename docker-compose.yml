@@ -1,0 +1,10 @@
+services:
+  train:
+    build: .
+    command: python -m src.train
+    volumes:
+      - ./artifacts:/app/artifacts
+    tty: true
+    stdin_open: true
+
+

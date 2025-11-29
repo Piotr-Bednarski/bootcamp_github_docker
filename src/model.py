@@ -22,7 +22,7 @@ def build_pipeline() -> Pipeline:
 	return Pipeline(
 		steps=[
 			("scaler", StandardScaler()),
-			("clf", LogisticRegression(max_iter=1000, n_jobs=1, random_state=42)),
+			("clf", LogisticRegression(max_iter=100, n_jobs=3, random_state=36)),
 		]
 	)
 
@@ -31,8 +31,10 @@ def train_and_save_model(X: pd.DataFrame, y: pd.Series, artifacts_dir: Path) -> 
 	"""Train pipeline and persist to artifacts directory. Returns (model_path, val_accuracy)."""
 	ensure_directory(artifacts_dir)
 
+	print("Starting fitting model …")
+
 	X_train, X_val, y_train, y_val = train_test_split(
-		X, y, test_size=0.2, random_state=42, stratify=y
+		X, y, test_size=0.4, random_state=42, stratify=y
 	)
 
 	pipeline = build_pipeline()

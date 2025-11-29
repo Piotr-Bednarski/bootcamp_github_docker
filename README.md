@@ -1,20 +1,12 @@
-## Bootcamp – Zadanie warsztatowe (po setupie)
-
-Poniżej znajdziesz precyzyjne kroki, które wykonamy wspólnie po zakończeniu instalacji i konfiguracji środowiska. Będziemy pracować na tym repozytorium, wykorzystując Git (gałęzie, PR, konflikty), Dockera (Dockerfile, Compose) oraz mini‑projekt ML na zbiorze Iris.
-
-Repo zawiera już:
-- `src/data.py`, `src/model.py`, `src/train.py`, `src/predict.py`
-- `requirements.txt`, `Dockerfile`, `docker-compose.yml`
-- artefakty uczenia zapisywane są do katalogu `artifacts/` (wykluczony w `.gitignore`)
-
----
+## Bootcamp – Zadanie warsztatowe 
 
 ## Cel
 - Uruchomić trening lokalnie i w Dockerze.
-- Przećwiczyć workflow z gałęzią `dev` i PR-ami.
-- Wprowadzić drobne modyfikacje modelu (hyperparametry) i porównać accuracy.
-- Zademonstrować stash oraz rozwiązanie konfliktu merge.
-- Otagować wydanie.
+- Przećwiczyć workflow z gałęzią `dev_1` i PR → merge do `main`.
+- Wprowadzić drobną zmianę w kodzie (np. komunikat lub hiperparametr) i wypchnąć ją.
+- Zademonstrować podstawy Dockera: `docker images`, `docker ps`, wejście do kontenera (`docker exec`).
+- (Opcjonalnie) Pokazać `git pull --rebase` na gałęzi `dev_1`.
+- (Opcjonalnie) Otagować wydanie.
 
 ---
 
@@ -45,115 +37,104 @@ docker compose up --build
 
 ---
 
-## 2) Workflow Git: `dev` + PR
+## 2) Workflow Git: `dev_1` → PR → merge do `main`
 
-### 2.1 Utworzenie gałęzi `dev` i wypchnięcie do zdalnego
+### 2.1 Utworzenie gałęzi `dev_1` od `main` i wypchnięcie do zdalnego
 ```bash
-git switch -c dev
-git push -u origin dev
+git switch -c dev_1
+git push -u origin dev_1
 ```
 
-### 2.2 Nowa funkcja/eksperyment na gałęzi feature
+### 2.2 Edycja kodu, commit i push
+Przykład 1 (czytelniejszy komunikat w `src/train.py`):
 ```bash
-git switch -c feature/tune-logreg dev
+git add src/train.py
+git commit -m "zmiana parametrów"
+git push
 ```
-Zmodyfikuj hiperparametry w `src/model.py` (funkcja `build_pipeline()`), np. zmień konfigurację `LogisticRegression`:
+
+Przykład 2 (lekka zmiana hiperparametru w `src/model.py`, funkcja `build_pipeline()`):
 ```python
-("clf", LogisticRegression(max_iter=500, n_jobs=1, random_state=42, C=0.5))
-```
-Następnie:
-```bash
-python -m src.train
-git add src/model.py
-git commit -m "Tune LogisticRegression: max_iter=500, C=0.5"
-git push -u origin feature/tune-logreg
+("clf", LogisticRegression(max_iter=500, n_jobs=1, random_state=42))
 ```
 
-### 2.3 Pull Request do `dev`
-- Otwórz PR z `feature/tune-logreg` → `dev`.
+### 2.3 Pull Request
+- Otwórz PR z `dev_1` → `main`.
 - W opisie PR:
   - krótko: co zmieniono i po co,
   - jak uruchomić i sprawdzić.
-- Zrób review w parach i zmerguj (squash merge).
+- Zrób review w parach i zmerguj (np. squash merge).
 
 ---
 
-## 3) Stash i hotfix
+## 3) Docker – krótkie demo: ps, obrazy, wejście do kontenera
 
-### 3.1 Symulacja pracy w toku
-Na `feature/tune-logreg` wprowadź dowolną zmianę „w toku”, ale jej nie commituj (np. dodaj dodatkowy `print` w `src/train.py`).
+### 3.1 Obrazy i kontenery
 ```bash
-git status  # widzisz zmiany w plikach
-git stash push -m "work-in-progress: extra logging"
+docker images
+docker ps
+docker ps -a
 ```
 
-### 3.2 Hotfix na `dev`
+### 3.2 Build obrazu i uruchomienie kontenera na chwilę
+Uruchom standardowy trening:
 ```bash
-git switch dev
-git switch -c hotfix/adjust-train-msg
+docker build -t bootcamp-ml:latest .
+docker run --rm -v "$PWD/artifacts:/app/artifacts" --name ml-train-once bootcamp-ml:latest
+docker ps -a  # zobaczysz zakończony kontener ml-train-once
 ```
-W pliku `src/train.py` dodaj czytelniejszy komunikat startu, np.:
-```python
-print("[train] Starting training pipeline...")
-```
+
+Aby zademonstrować wejście do działającego kontenera, wystartuj go w tle:
 ```bash
+docker run -d --name ml-demo -v "$PWD/artifacts:/app/artifacts" bootcamp-ml:latest tail -f /dev/null
+docker ps  # teraz widać ml-demo
+docker logs ml-demo
+docker exec -it ml-demo /bin/sh   # lub /bin/bash, jeśli dostępny
+# wewnątrz kontenera:
 python -m src.train
-git add src/train.py
-git commit -m "Hotfix: clearer start message in training"
-git push -u origin hotfix/adjust-train-msg
+exit
+docker stop ml-demo && docker rm ml-demo
 ```
-Otwórz PR `hotfix/adjust-train-msg` → `dev` i zmerguj.
 
-### 3.3 Powrót do pracy i przywrócenie zmian ze stash
+### 3.3 Compose 
 ```bash
-git switch feature/tune-logreg
-git stash list
-git stash apply  # lub git stash pop
+docker compose up --build         # trening i zakończenie
+docker compose up --build -d      # uruchom w tle (zakończy się szybko po treningu)
+docker compose ps
+docker compose logs -n 100
+docker compose down
 ```
-Zakończ pracę, zcommituj jeśli trzeba, dopchnij zmiany, ewentualnie zaktualizuj PR.
 
 ---
 
-## 4) Ćwiczenie konfliktu merge (krótka symulacja)
+## 4) (Opcjonalnie) `git pull --rebase` na `dev_1`
 
-Cel: pokazać manualne rozwiązanie konfliktu.
-1. Utwórz dwie gałęzie od `dev`: `feature/change-a` i `feature/change-b`.
-2. W obu zmień ten sam fragment w `src/predict.py` (np. pierwszy wektor w tablicy `sample`).
-3. Zmerge’uj `feature/change-a` → `dev`.
-4. Spróbuj zmerge’ować `feature/change-b` → `dev` (pojawi się konflikt).
-5. Rozwiąż konflikt lokalnie:
-   ```bash
-   git pull
-   git merge origin/dev
-   # edycja plików, usunięcie znaczników konfliktu
-   git add .
-   git commit
-   git push
-   ```
-6. Dokończ PR.
+Jeśli `main` poszedł do przodu, możesz zaktualizować `dev_1`:
+```bash
+git switch dev_1
+git fetch origin
+git pull --rebase origin main      # lub: git rebase origin/main
+```
+Rozwiąż ewentualne konflikty, dokończ rebase i wypchnij:
+```bash
+git push --force-with-lease
+```
 
 ---
 
 ## 5) Wydanie: tag i push tagów
-Po zmergowaniu istotnych zmian z `dev` do `main`:
+Po zmergowaniu PR z `dev_1` do `main`:
 ```bash
 git switch main
-git merge --no-ff dev
-git tag v0.1.0 -m "First workshop release"
+git pull
+git tag v0.1.0 -m ""
 git push origin main --tags
 ```
 
 ---
-
-## 6) Dobre praktyki (stosujemy podczas zadań)
-- **Małe, opisowe commity** (imperatyw, krótki temat).
-- **Gałęzie feature/**, PR z opisem i checklistą „jak testować”.
-- **Brak sekretów w repo**, artefakty w `artifacts/` i w `.gitignore`.
-- **Powtarzalność**: Docker/Compose zapewnia te same wyniki dla każdego.
-
 ---
 
-## 7) Szybkie polecenia (ściąga)
+## 6) Szybkie polecenia (ściąga)
 - Uruchom lokalnie:
   ```bash
   python -m src.train && python -m src.predict
@@ -169,12 +150,16 @@ git push origin main --tags
   ```
 - Gałęzie:
   ```bash
-  git switch -c dev
-  git switch -c feature/nazwa dev
+  git switch -c dev_1
+  git push -u origin dev_1
   ```
-- Stash:
+- Pull rebase:
   ```bash
-  git stash push -m "msg"
-  git stash list
-  git stash apply  # albo pop
+  git pull --rebase origin main
+  ```
+- Docker ps / exec:
+  ```bash
+  docker images
+  docker ps -a
+  docker exec -it <container_id_or_name> /bin/sh
   ```

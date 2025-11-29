@@ -3,5 +3,5 @@ __pycache__/
 .venv/
 artifacts/
 .vscode/
-
+src/__pycache__/
 

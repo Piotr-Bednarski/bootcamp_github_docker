@@ -5,6 +5,7 @@ from typing import Tuple
 
 import joblib
 import pandas as pd
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
@@ -22,7 +23,7 @@ def build_pipeline() -> Pipeline:
 	return Pipeline(
 		steps=[
 			("scaler", StandardScaler()),
-			("clf", LogisticRegression(max_iter=100, n_jobs=3, random_state=36)),
+			("clf", DecisionTreeClassifier(max_depth=3, random_state=42)),
 		]
 	)
 

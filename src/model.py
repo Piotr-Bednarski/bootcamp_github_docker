@@ -23,7 +23,7 @@ def build_pipeline() -> Pipeline:
 	return Pipeline(
 		steps=[
 			("scaler", StandardScaler()),
-			("clf", DecisionTreeClassifier(max_depth=1, random_state=36)),
+			("clf", DecisionTreeClassifier(max_depth=3, random_state=42)),
 		]
 	)
 
